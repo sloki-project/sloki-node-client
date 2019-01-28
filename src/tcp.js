@@ -29,6 +29,7 @@ class ClientTCP extends EventEmitter {
 
             this.commandsList = commands;
             for (let command in commands) {
+
                 this[command] = (param, option, cb) => {
                     let params = [];
                     if (typeof param === "function") {

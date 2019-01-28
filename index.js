@@ -30,12 +30,12 @@ function Client(url) {
         let port = url[1];
 
         if (proto === "tcp") {
-            const ClientTCP = require('./tcp');
+            const ClientTCP = require('./src/tcp');
             return new ClientTCP(port, host);
         }
 
         if (proto === "tls") {
-            const ClientTLS = require('./tls');
+            const ClientTLS = require('./src/tls');
             return new require('./tls')(port, host);
         }
     }
