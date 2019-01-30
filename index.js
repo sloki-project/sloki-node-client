@@ -1,6 +1,6 @@
 const implementedProtocols = ['tcp','tls'];
 
-function Client(url) {
+function Client(url, options) {
     let client;
     let e = url.match(/^([^:]+)/);
     if (!e) {
@@ -31,12 +31,12 @@ function Client(url) {
 
         if (proto === "tcp") {
             const ClientTCP = require('./src/tcp');
-            return new ClientTCP(port, host);
+            return new ClientTCP(port, host, options);
         }
 
         if (proto === "tls") {
             const ClientTLS = require('./src/tls');
-            return new require('./tls')(port, host);
+            return new require('./tls')(port, host, options);
         }
     }
 }

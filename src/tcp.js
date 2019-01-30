@@ -8,13 +8,18 @@ let commands = {};
 
 class ClientTCP extends EventEmitter {
 
-    constructor(port, host) {
+    constructor(port, host, options) {
         super();
+
+        this.port = port;
+        this.host = host;
+        this.options = options || {};
+
         this.private = {};
         this.private.isConnected = false;
         this.private.requests = {};
-        this.options = {host, port};
         this.commandsList = [];
+
         this.defaults = {
             timeout:1000
         }
@@ -48,7 +53,11 @@ class ClientTCP extends EventEmitter {
                         params = undefined;
                     }
 
-                    this._request(command, params, cb);
+                    if (!this.options.benchNoRequest) {
+                        this._request(command, params, cb);
+                    } else {
+                        cb();
+                    }
                     return this;
                 }
             }
@@ -91,7 +100,7 @@ class ClientTCP extends EventEmitter {
                 delete this.private.requests[data.id];
             });
 
-            this.private.conn = net.connect(this.options.port, this.options.host, (err) => {
+            this.private.conn = net.connect(this.port, this.host, (err) => {
                 if (err) {
                     return reject(err);
                 }
