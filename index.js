@@ -1,4 +1,7 @@
-const implementedProtocols = ['tcp','tls'];
+const implementedTransports = ['tcp','tls'];
+const defaultOptions = {
+    applicationLayer:'jayson'
+}
 
 function Client(url, options) {
     let client;
@@ -9,35 +12,44 @@ function Client(url, options) {
         return;
     }
 
-    let proto;
+    options = Object.assign(defaultOptions, options||{});
+
+    let transportLayer;
 
     if (e) {
-        proto = e[1].toLowerCase();
-        if (implementedProtocols.indexOf(proto)<0) {
-            throw new Error('URL does not contain any implemented protocol (' + implementedProtocols.join(',')+')');
+        transportLayer = e[1].toLowerCase();
+        if (implementedTransports.indexOf(transportLayer)<0) {
+            throw new Error('URL does not contain any implemented protocol (' + implementedTransports.join(',')+')');
             return null;
         }
     }
 
-    if (proto === "tls") {
+    if (transportLayer === "tls") {
         throw new Error('Protocol '+proto+' not yet implemented');
         process.exit(-1);
     }
 
-    if (proto === "tcp" || proto === "tls") {
+    if (transportLayer === "tcp" || transportLayer === "tls") {
         url = url.replace(/(tcp|tls):\/\//,'').split(':');
         let host = url[0];
-        let port = url[1];
+        let port = parseInt(url[1]);
+        let myClient;
 
-        if (proto === "tcp") {
-            const ClientTCP = require('./src/tcp');
-            return new ClientTCP(port, host, options);
+        switch (transportLayer) {
+            case "tcp":
+                switch (options.applicationLayer) {
+                    case "jayson":
+                        MyClient = require('./src/tcpJayson');
+                        return new MyClient(port, host, options);
+                        break;
+                    default:
+                        throw new Error('Unknow application layer '+options.applicationLayer);
+                }
+            case "tls":
+                throw new Error('Transport layer TLS not yet implemented');
         }
 
-        if (proto === "tls") {
-            const ClientTLS = require('./src/tls');
-            return new require('./tls')(port, host, options);
-        }
+        console.log(MyClient);
     }
 }
 

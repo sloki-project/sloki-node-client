@@ -1,10 +1,12 @@
 const net = require('net');
 const JSONStream = require('JSONStream');
 const EventEmitter = require('events');
-const uuid = require('uuid/v4');
 const log = require('evillogger')({ns:'clientTcp'});
 
-let commands = {};
+// fastest uuid generator for sloki
+const hyperid = require('hyperid');
+const uuid = hyperid(true);
+
 
 class ClientTCP extends EventEmitter {
 
@@ -15,14 +17,10 @@ class ClientTCP extends EventEmitter {
         this.host = host;
         this.options = options || {};
 
-        this.private = {};
-        this.private.isConnected = false;
-        this.private.requests = {};
+        this.isConnected = false;
+        this.requests = {};
         this.commandsList = [];
 
-        this.defaults = {
-            timeout:1000
-        }
     }
 
     getCommands(reject, resolve) {
@@ -53,11 +51,8 @@ class ClientTCP extends EventEmitter {
                         params = undefined;
                     }
 
-                    if (!this.options.benchNoRequest) {
-                        this._request(command, params, cb);
-                    } else {
-                        cb();
-                    }
+                    this._request(command, params, cb);
+
                     return this;
                 }
             }
@@ -65,90 +60,91 @@ class ClientTCP extends EventEmitter {
         });
     }
 
-    commandsName() {
-        return Object.keys(this.commandsList);
-    }
-
     connect() {
 
         return new Promise((resolve, reject) => {
 
-            this.private.jsonstream = JSONStream.parse();
+            this.jsonstream = JSONStream.parse();
 
-            this.private.jsonstream.on('data', (data) => {
+            this.jsonstream.on('data', (data) => {
                 this.emit("response", data);
 
-                if(!this.private.requests[data.id]) {
+                let r = this.requests[data.id];
+
+                if(!r) {
                     if (data.error) {
                         log.warn(JSON.stringify(data.error));
                     } else {
                         log.warn(JSON.stringify(data));
                     }
-                    //this.emit("error", data.error);
+                    this.emit("error", data.error);
                     return;
                 }
 
-                if (this.private.requests[data.id].callback) {
-                    this.private.requests[data.id].callback(data.error, data.result);
-                } else {
-                    if (data.error) {
-                        this.private.requests[data.id].reject(data.error);
-                    } else {
-                        this.private.requests[data.id].resolve(data.result);
-                    }
+                if(r.callback) {
+                    r.callback(data.error, data.result);
+                    delete this.requests[data.id];
+                    return;
                 }
-                delete this.private.requests[data.id];
+
+                if (data.error) {
+                    r.reject(data.error);
+                    delete this.requests[data.id];
+                    return;
+                }
+
+                r.resolve(data.result);
+                delete this.requests[data.id];
+
             });
 
-            this.private.conn = net.connect(this.port, this.host, (err) => {
+            this.conn = net.connect(this.port, this.host, (err) => {
                 if (err) {
                     return reject(err);
                 }
-                this.private.isConnected = true;
+                this.isConnected = true;
                 this.getCommands(reject, resolve);
             });
 
-            //this.conn.setTimeout(this.defaults.timeout);
-
-            this.private.conn.on('timeout', () => {
+            this.conn.on('timeout', () => {
                 this.emit('timeout');
                 log.info('onTimeout');
                 this._close();
             });
 
-            this.private.conn.on('error', (err) => {
+            this.conn.on('error', (err) => {
                 this.emit('error', err);
                 //log.error('onError', err.message);
-                this.private.conn.destroy();
+                this.conn.destroy();
             });
 
-            this.private.conn.on('close', () => {
+            this.conn.on('close', () => {
                 this.emit('close');
                 log.debug('onClose');
-                this.private.isConnected = false;
+                this.isConnected = false;
             });
 
-            this.private.conn.on('end', () => {
+            this.conn.on('end', () => {
                 this.emit('end');
                 log.debug('onEnd');
-                this.private.isConnected = false;
+                this.isConnected = false;
 
             });
 
-            this.private.conn.on('destroy', () => {
+            this.conn.on('destroy', () => {
                 this.emit('destroy');
                 log.info('_onDestroy');
-                this.private.isConnected = false;
+                this.isConnected = false;
             });
 
-            this.private.conn.pipe(this.private.jsonstream);
+            this.conn.pipe(this.jsonstream);
 
         });
     }
 
     _close() {
-        this.private.isConnected = false;
-        this.private.conn.end();
+        this.isConnected = false;
+        this.conn.end();
     }
 
     _requestSend(id, method, params) {
@@ -168,26 +164,26 @@ class ClientTCP extends EventEmitter {
         }
 
         //@TODO: take a look at fastify to speed up stringify()
-        this.private.conn.write(JSON.stringify(req));
+        this.conn.write(JSON.stringify(req));
     }
 
     _requestWithCallback(id, method, params, callback) {
-        if (!this.private.isConnected) {
+        if (!this.isConnected) {
             callback(new Error('not connected'));
             return;
         }
 
-        this.private.requests[id] = {callback};
+        this.requests[id] = {callback};
         this._requestSend(id, method, params);
     }
 
     _requestWithPromise(id, method, params) {
         return new Promise((resolve, reject) => {
-          if (!this.private.isConnected) {
+          if (!this.isConnected) {
               reject(new Error('not connected'));
               return;
           }
-          this.private.requests[id] = {resolve, reject};
+          this.requests[id] = {resolve, reject};
           this._requestSend(id, method, params);
         })
     }
@@ -198,17 +194,15 @@ class ClientTCP extends EventEmitter {
             params = null;
         }
 
-        let id = uuid();
-
         if (callback) {
-            this._requestWithCallback(id, method, params, callback);
+            this._requestWithCallback(uuid(), method, params, callback);
         } else {
-            return this._requestWithPromise(id, method, params);
+            return this._requestWithPromise(uuid(), method, params);
         }
     }
 
     close() {
-        this.private.conn.end();
+        this.conn.end();
     }
 
 
