@@ -176,6 +176,7 @@ class ClientTCP extends EventEmitter {
             callback(new Error('not connected'));
             return;
         }
+
         this.private.requests[id] = {callback};
         this._requestSend(id, method, params);
     }
