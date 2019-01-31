@@ -114,7 +114,7 @@ class ClientTCP extends EventEmitter {
 
             this.conn.on('error', (err) => {
                 this.emit('error', err);
-                //log.error('onError', err.message);
+                log.error('onError', err.message);
                 this.conn.destroy();
             });
 
