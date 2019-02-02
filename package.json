@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/franck34/sloki-node-client.git"
+    "url": "git+https://github.com/sloki-project/sloki-node-client.git"
   },
   "keywords": [
     "LokiJS",
@@ -17,9 +17,9 @@
   "author": "franck34",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/franck34/sloki-node-client/issues"
+    "url": "https://github.com/sloki-project/sloki-node-client/issues"
   },
-  "homepage": "https://github.com/franck34/sloki-node-client#readme",
+  "homepage": "https://github.com/sloki-project/sloki-node-client#readme",
   "dependencies": {
     "JSONStream": "^1.3.5",
     "evillogger": "^1.2.2",
