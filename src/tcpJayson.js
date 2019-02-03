@@ -24,7 +24,7 @@ class ClientTCP extends EventEmitter {
     }
 
     getCommands(reject, resolve) {
-        this._request('commands', null, (err, commands) => {
+        this._request(['commands', (err, commands) => {
 
             if (err) {
                 return reject(err);
@@ -32,32 +32,14 @@ class ClientTCP extends EventEmitter {
 
             this.commandsList = commands;
             for (let command in commands) {
-
-                this[command] = (param, option, cb) => {
-                    let params = [];
-                    if (typeof param === "function") {
-                        cb = param;
-                        params = undefined;
-                    } else if (typeof option === "function") {
-                        cb = option;
-                        option = undefined;
-                        params.push(param);
-                    } else {
-                        params.push(param);
-                        if (option) params.push(option);
-                    }
-
-                    if (params && params.length === 0) {
-                        params = undefined;
-                    }
-
-                    this._request(command, params, cb);
-
+                this[command] = (...args) => {
+                    args.unshift(command);
+                    this._request(args);
                     return this;
                 }
             }
             return resolve();
-        });
+        }]);
     }
 
     connect() {
@@ -163,6 +145,8 @@ class ClientTCP extends EventEmitter {
             }
         }
 
+        //console.log(req);
+
         //@TODO: take a look at fastify to speed up stringify()
         this.conn.write(JSON.stringify(req));
     }
@@ -188,16 +172,20 @@ class ClientTCP extends EventEmitter {
         })
     }
 
-    _request(method, params, callback) {
-        if (typeof params === "function") {
-            callback = params;
-            params = null;
-        }
-
-        if (callback) {
-            this._requestWithCallback(uuid(), method, params, callback);
+    _request(args) {
+        let method = args.shift();
+        let callback = null;
+        if (typeof args[args.length-1] === "function") {
+            callback = args.pop();
+            if (!args.length) {
+                args = undefined;
+            }
+            this._requestWithCallback(uuid(), method, args, callback);
         } else {
-            return this._requestWithPromise(uuid(), method, params);
+            if (!args.length) {
+                args = undefined;
+            }
+            return this._requestWithPromise(uuid(), method, args);
         }
     }
 
