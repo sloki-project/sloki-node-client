@@ -34,7 +34,6 @@ class ClientTCP extends EventEmitter {
             for (let command in commands) {
                 this[command] = (...args) => {
                     args.unshift(command);
-                    console.log(args);
                     this._request(args);
                     return this;
                 }
