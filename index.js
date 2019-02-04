@@ -48,8 +48,6 @@ function Client(url, options) {
             case "tls":
                 throw new Error('Transport layer TLS not yet implemented');
         }
-
-        console.log(MyClient);
     }
 }
 
