@@ -20,30 +20,26 @@ class ClientTCP extends EventEmitter {
 
         this.isConnected = false;
         this.requests = {};
-        this.commandsList = [];
+        this.methodsList = [];
     }
 
-    getCommands(reject, resolve) {
-        this._request(['commands', (err, commands) => {
+    getMethods(reject, resolve) {
+        this._request(['methods', (err, methods) => {
 
             if (err) {
                 return reject(err);
             }
 
-            this.commandsList = commands;
-            for (let command in commands) {
+            this.methodsList = methods;
+            for (let method in methods) {
 
-                console.log(commands[command]);
-
-                this[command] = (...args) => {
-                    args.unshift(command);
+                this[method] = (...args) => {
+                    args.unshift(method);
                     this._request(args);
                     return this;
                 }
 
-                if (this.options.usePromise) {
-                    this[command] = util.promisify(this[command]);
-                }
+                this[method] = util.promisify(this[method]);
             }
 
             return resolve();
@@ -93,7 +89,7 @@ class ClientTCP extends EventEmitter {
                     return reject(err);
                 }
                 this.isConnected = true;
-                this.getCommands(reject, resolve);
+                this.getMethods(reject, resolve);
             });
 
             this.conn.on('timeout', () => {
