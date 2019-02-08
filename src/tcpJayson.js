@@ -2,6 +2,7 @@ const net = require('net');
 const JSONStream = require('JSONStream');
 const EventEmitter = require('events');
 const log = require('evillogger')({ns:'clientTcp'});
+const util = require('util');
 
 // fastest uuid generator for sloki
 const hyperid = require('hyperid');
@@ -20,7 +21,6 @@ class ClientTCP extends EventEmitter {
         this.isConnected = false;
         this.requests = {};
         this.commandsList = [];
-
     }
 
     getCommands(reject, resolve) {
@@ -32,12 +32,20 @@ class ClientTCP extends EventEmitter {
 
             this.commandsList = commands;
             for (let command in commands) {
+
+                console.log(commands[command]);
+
                 this[command] = (...args) => {
                     args.unshift(command);
                     this._request(args);
                     return this;
                 }
+
+                if (this.options.usePromise) {
+                    this[command] = util.promisify(this[command]);
+                }
             }
+
             return resolve();
         }]);
     }
@@ -53,7 +61,7 @@ class ClientTCP extends EventEmitter {
 
                 let r = this.requests[data.id];
 
-                if(!r) {
+                if (!r) {
                     if (data.error) {
                         log.warn(JSON.stringify(data.error));
                     } else {
@@ -63,7 +71,7 @@ class ClientTCP extends EventEmitter {
                     return;
                 }
 
-                if(r.callback) {
+                if (r.callback) {
                     r.callback(data.error, data.result);
                     delete this.requests[data.id];
                     return;
