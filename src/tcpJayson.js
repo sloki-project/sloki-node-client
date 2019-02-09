@@ -1,8 +1,7 @@
 const net = require('net');
 const JSONStream = require('JSONStream');
 const EventEmitter = require('events');
-const log = require('evillogger')({ns:'clientTcp'});
-const util = require('util');
+const debug = require('debug')('sloki-client')
 
 // fastest uuid generator for sloki
 const hyperid = require('hyperid');
@@ -14,122 +13,142 @@ class ClientTCP extends EventEmitter {
     constructor(port, host, options) {
         super();
 
-        this.port = port;
-        this.host = host;
-        this.options = options || {};
+        this._port = port;
+        this._host = host;
+        this._options = options || {};
 
-        this.isConnected = false;
-        this.requests = {};
-        this.methodsList = [];
+        this._isConnected = false;
+        this._jsonstream = null;
+        this._requests = {};
+        this._methods = [];
+        this._eventsByName = null;
     }
 
-    getMethods(reject, resolve) {
+    /*
+     * Privates
+     */
+
+     _getMethods(callback) {
         this._request(['methods', (err, methods) => {
 
             if (err) {
-                return reject(err);
+                return callback(err);
             }
 
-            this.methodsList = methods;
-            for (let method in methods) {
+            this._methods = methods;
 
-                this[method] = (...args) => {
-                    args.unshift(method);
-                    this._request(args);
-                    return this;
-                }
-
-                this[method] = util.promisify(this[method]);
+            for (let methodName in methods) {
+                this[methodName] = (...args) => {
+                    args.unshift(methodName);
+                    if (typeof args[args.length-1] === 'function') {
+                        this._request(args);
+                        return this;
+                    }
+                    return new Promise((resolve, reject) => {
+                        this._request(args, resolve, reject);
+                    });
+                };
             }
 
-            return resolve();
+            callback();
         }]);
     }
 
-    connect() {
+    _eventExists(eventName) {
 
-        return new Promise((resolve, reject) => {
+        if (this._eventsByName) {
+            return this._eventsByName[eventName];
+        }
 
-            this.jsonstream = JSONStream.parse();
+        if (!this._eventsByName) {
+            this._eventsByName = {};
+            for (const ev of this.eventNames()) {
+                this._eventsByName[ev] = true;
+            }
+        }
 
-            this.jsonstream.on('data', (data) => {
-                this.emit("response", data);
+        return this._eventsByName[eventName];
+    }
 
-                let r = this.requests[data.id];
+    _initializeJsonStream() {
 
-                if (!r) {
-                    if (data.error) {
-                        log.warn(JSON.stringify(data.error));
-                    } else {
-                        log.warn(JSON.stringify(data));
-                    }
-                    this.emit("error", data.error);
-                    return;
-                }
+        let self = this;
 
-                if (r.callback) {
-                    r.callback(data.error, data.result);
-                    delete this.requests[data.id];
-                    return;
-                }
+        this._jsonstream = JSONStream.parse();
 
+        this._jsonstream.on('data', (data) => {
+
+            let r = this._requests[data.id];
+
+            // no callback stored for this request ?
+            // fake id sent by the "server" ?
+            if (!r) {
                 if (data.error) {
-                    r.reject(data.error);
-                    delete this.requests[data.id];
-                    return;
+                    debug(JSON.stringify(data.error));
+                } else {
+                    debug(JSON.stringify(data));
                 }
+                this._emit("error", data.error);
+                return;
+            }
 
-                r.resolve(data.result);
-                delete this.requests[data.id];
-
-            });
-
-            this.conn = net.connect(this.port, this.host, (err) => {
-                if (err) {
-                    return reject(err);
-                }
-                this.isConnected = true;
-                this.getMethods(reject, resolve);
-            });
-
-            this.conn.on('timeout', () => {
-                this.emit('timeout');
-                log.info('onTimeout');
-                this._close();
-            });
-
-            this.conn.on('error', (err) => {
-                this.emit('error', err);
-                log.error('onError', err.message);
-                this.conn.destroy();
-            });
-
-            this.conn.on('close', () => {
-                this.emit('close');
-                log.debug('onClose');
-                this.isConnected = false;
-            });
-
-            this.conn.on('end', () => {
-                this.emit('end');
-                log.debug('onEnd');
-                this.isConnected = false;
-
-            });
-
-            this.conn.on('destroy', () => {
-                this.emit('destroy');
-                log.info('_onDestroy');
-                this.isConnected = false;
-            });
-
-            this.conn.pipe(this.jsonstream);
-
+            data.error && debug(data.error.message);
+            r.callback(data.error, data.result);
+            delete this._requests[data.id];
         });
     }
 
+    _emit(eventName, data) {
+        if (this._eventExists(eventName)) {
+            this.emit(eventName, data);
+        }
+    }
+
+    _initializeSocket(callback) {
+
+        this._conn = net.connect(this._port, this._host);
+
+        this._conn.on('timeout', () => {
+            this._emit('timeout');
+            debug('onTimeout');
+            this._close();
+        });
+
+        this._conn.on('error', (err) => {
+            callback(err);
+            this._emit('error', err);
+            debug('onError', err.message);
+            this._conn.destroy();
+        });
+
+        this._conn.on('close', () => {
+            this._emit('close');
+            debug('close');
+            this._isConnected = false;
+        });
+
+        this._conn.on('end', () => {
+            this._emit('end');
+            debug('end');
+            this._isConnected = false;
+        });
+
+        this._conn.on('destroy', () => {
+            this._emit('destroy');
+            debug('destroy');
+            this._isConnected = false;
+        });
+
+        this._conn.on('connect', () => {
+            this._isConnected = true;
+            this._getMethods(callback);
+        });
+
+        this._conn.pipe(this._jsonstream);
+    }
+
     _close() {
-        this.isConnected = false;
+        this._isConnected = false;
         this.conn.end();
     }
 
@@ -149,55 +168,74 @@ class ClientTCP extends EventEmitter {
             }
         }
 
-        //console.log(req);
 
-        //@TODO: take a look at fastify to speed up stringify()
-        this.conn.write(JSON.stringify(req));
+        //@TODO: take a look at fastify to speed up stringify() ?
+        req = JSON.stringify(req);
+        this._conn.write(req);
+        debug(req);
     }
 
-    _requestWithCallback(id, method, params, callback) {
-        if (!this.isConnected) {
+    _requestPush(id, method, params, callback) {
+        if (!this._isConnected) {
             callback(new Error('not connected'));
             return;
         }
 
-        this.requests[id] = {callback};
+        this._requests[id] = {method, params, callback};
         this._requestSend(id, method, params);
     }
 
-    _requestWithPromise(id, method, params) {
-        return new Promise((resolve, reject) => {
-          if (!this.isConnected) {
-              reject(new Error('not connected'));
-              return;
-          }
-          this.requests[id] = {resolve, reject};
-          this._requestSend(id, method, params);
-        })
-    }
-
-    _request(args) {
+    _request(args, resolve, reject) {
         let method = args.shift();
-        let callback = null;
-        if (typeof args[args.length-1] === "function") {
-            callback = args.pop();
+
+        if (typeof args[args.length-1] === 'function') {
+            let callback = args.pop();
             if (!args.length) {
                 args = undefined;
             }
-            this._requestWithCallback(uuid(), method, args, callback);
+            this._requestPush(uuid(), method, args, callback);
         } else {
-            if (!args.length) {
-                args = undefined;
-            }
-            return this._requestWithPromise(uuid(), method, args);
+            this._requestPush(uuid(), method, args, (err, result) => {
+                if (err) {
+                    return reject(err);
+                }
+                resolve(result);
+            });
         }
     }
 
-    close() {
-        this.conn.end();
+    /*
+     * Public
+     */
+    connect(callback) {
+        this._initializeJsonStream();
+        if (!callback) {
+            return new Promise((resolve, reject) => {
+                this._initializeSocket((err) => {
+                    if (err) {
+                        return reject(err);
+                    }
+                    return resolve();
+                });
+            });
+        }
+
+        this._initializeSocket(callback);
+
     }
 
-
+    close(callback) {
+        process.nextTick(() => {
+            const pendingRequests = Object.keys(this._requests).length;
+            if (pendingRequests>0) {
+                debug(`closing client, but missed ${pendingRequests} pending requests`);
+            }
+            this._conn.end();
+            if (callback) {
+                callback();
+            }
+        });
+    }
 }
 
 module.exports = ClientTCP;
