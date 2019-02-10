@@ -241,6 +241,14 @@ class ClientTCP extends EventEmitter {
         return Object.keys(this._methods);
     }
 
+    getMethodDescription(method) {
+        if (!this._methods[method]) {
+            return "method not found";
+        }
+
+        return this._methods[method].description;
+    }
+
 }
 
 module.exports = ClientTCP;
