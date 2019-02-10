@@ -14,10 +14,8 @@ A NodeJS Client for [Sloki](https://github.com/sloki-project/sloki)
   * ```npm install sloki-node-client```
   * ```yarn add sloki-node-client```
 
------
+
 
 ## Usage
 
 See [examples](https://github.com/sloki-project/sloki-node-client/examples)
-
-----
