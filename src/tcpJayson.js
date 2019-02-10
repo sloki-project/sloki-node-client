@@ -2,6 +2,7 @@ const net = require('net');
 const JSONStream = require('JSONStream');
 const EventEmitter = require('events');
 const debug = require('debug')('sloki-client')
+const version = require('../package.json').version;
 
 // fastest uuid generator for sloki
 const hyperid = require('hyperid');
@@ -93,6 +94,11 @@ class ClientTCP extends EventEmitter {
             }
 
             data.error && debug(data.error.message);
+
+            if (r.method === 'versions' && typeof data.result === 'object') {
+                data.result['sloki-node-client'] = version;
+            }
+
             r.callback(data.error, data.result);
             delete this._requests[data.id];
         });

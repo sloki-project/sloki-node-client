@@ -5,7 +5,6 @@
 ### Added
 * add getMethodsName() [#3](https://github.com/sloki-project/sloki-node-client/issues/3)
 * add getMethodDescription() [#4](https://github.com/sloki-project/sloki-node-client/issues/4)
-* add getClientVersion() [#5](https://github.com/sloki-project/sloki-node-client/issues/5)
 
 ## [0.0.6] - 2019-02-09
 
