@@ -1,6 +1,15 @@
+const version = require('./package.json').version;
+
 const implementedTransports = ['tcp','tls'];
 const defaultOptions = {
     applicationLayer:'jayson'
+}
+
+function decorate(myClient) {
+    myClient.getClientVersion = () => {
+        return version;
+    }
+    return myClient;
 }
 
 function Client(url, options) {
@@ -40,7 +49,7 @@ function Client(url, options) {
                 switch (options.applicationLayer) {
                     case "jayson":
                         MyClient = require('./src/tcpJayson');
-                        return new MyClient(port, host, options);
+                        return decorate(new MyClient(port, host, options));
                         break;
                     default:
                         throw new Error('Unknow application layer '+options.applicationLayer);
