@@ -3,7 +3,7 @@
 ## [unreleased]
 
 ### Added
-* add getMethodsName() []#3](https://github.com/sloki-project/sloki-node-client/issues/3)
+* add getMethodsName() [#3](https://github.com/sloki-project/sloki-node-client/issues/3)
 * add getMethodDescription() [#4](https://github.com/sloki-project/sloki-node-client/issues/4)
 
 
