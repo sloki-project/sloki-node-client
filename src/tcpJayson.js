@@ -236,6 +236,11 @@ class ClientTCP extends EventEmitter {
             }
         });
     }
+
+    getMethodsName() {
+        return Object.keys(this._methods);
+    }
+
 }
 
 module.exports = ClientTCP;
