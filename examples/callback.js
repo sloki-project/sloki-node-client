@@ -8,13 +8,13 @@ async.waterfall([
         client.connect(next);
     },
     (next) => {
-        client.loadDatabase('myTestDatabase', next);
+        client.loadDatabase({ database:'myTestDatabase' }, next);
     },
     (db, next) => {
-        client.insert('devices',{'foo':'bar'}, next);
+        client.insert({ collection:'devices', document:{'foo':'bar'} }, next);
     },
     (result, next) => {
-        client.find('devices', next);
+        client.find({ collection:'devices' }, next);
     },
     (devices, next) => {
         console.log(devices);
