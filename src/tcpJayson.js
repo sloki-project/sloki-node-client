@@ -30,29 +30,38 @@ class ClientTCP extends EventEmitter {
      */
 
      _getMethods(callback) {
-        this._request(['methods', (err, methods) => {
+        this._request({
+            method:'methods',
+            callback:(err, methods) => {
+                if (err) {
+                    return callback(err);
+                }
 
-            if (err) {
-                return callback(err);
+                this._methods = methods;
+
+                for (let methodTitle in methods) {
+                    this[methodTitle] = (...args) => {
+                        if (typeof args[args.length-1] === 'function') {
+                            this._request({
+                                method:methodTitle,
+                                params:args[0]||undefined,
+                                callback:args[args.length-1]
+                            });
+                        } else {
+                            return new Promise((resolve, reject) => {
+                                this._request({
+                                    method:methodTitle,
+                                    params:args[0]||undefined,
+                                    resolve:resolve,
+                                    reject:reject
+                                });
+                            });
+                        }
+                    };
+                }
+                callback();
             }
-
-            this._methods = methods;
-
-            for (let methodName in methods) {
-                this[methodName] = (...args) => {
-                    args.unshift(methodName);
-                    if (typeof args[args.length-1] === 'function') {
-                        this._request(args);
-                        return this;
-                    }
-                    return new Promise((resolve, reject) => {
-                        this._request(args, resolve, reject);
-                    });
-                };
-            }
-
-            callback();
-        }]);
+        });
     }
 
     _eventExists(eventName) {
@@ -163,17 +172,9 @@ class ClientTCP extends EventEmitter {
         let req = {
             jsonrpc:"2.0",
             id,
-            method
+            method,
+            params
         }
-
-        if (params != null && params != undefined) {
-            if (typeof params === "number" || typeof params === "string") {
-                req.params = [params];
-            } else {
-                req.params = params;
-            }
-        }
-
 
         //@TODO: take a look at fastify to speed up stringify() ?
         req = JSON.stringify(req);
@@ -191,21 +192,15 @@ class ClientTCP extends EventEmitter {
         this._requestSend(id, method, params);
     }
 
-    _request(args, resolve, reject) {
-        let method = args.shift();
-
-        if (typeof args[args.length-1] === 'function') {
-            let callback = args.pop();
-            if (!args.length) {
-                args = undefined;
-            }
-            this._requestPush(uuid(), method, args, callback);
+    _request(op) {
+        if (op.callback) {
+            this._requestPush(uuid(), op.method, op.params, op.callback);
         } else {
-            this._requestPush(uuid(), method, args, (err, result) => {
+            this._requestPush(uuid(), op.method, op.params, (err, result) => {
                 if (err) {
-                    return reject(err);
+                    return op.reject(err);
                 }
-                resolve(result);
+                op.resolve(result);
             });
         }
     }

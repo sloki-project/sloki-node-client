@@ -6,6 +6,9 @@
 * add getMethodsName() [#3](https://github.com/sloki-project/sloki-node-client/issues/3)
 * add getMethodDescription() [#4](https://github.com/sloki-project/sloki-node-client/issues/4)
 
+### Changed
+* use named parameters in jsonrpc layer [#6](https://github.com/sloki-project/sloki-node-client/issues/6)
+
 
 ## [0.0.6] - 2019-02-09
 
