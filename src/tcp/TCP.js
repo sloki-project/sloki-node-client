@@ -1,15 +1,12 @@
 const net = require('net');
-const JSONStream = require('JSONStream');
 const EventEmitter = require('events');
-const debug = require('debug')('sloki-client')
-const version = require('../package.json').version;
+const debug = require('debug')('sloki-client');
 
 // fastest uuid generator for sloki
 const hyperid = require('hyperid');
 const uuid = hyperid(true);
 
-
-class ClientTCP extends EventEmitter {
+class TCP extends EventEmitter {
 
     constructor(port, host, options) {
         super();
@@ -19,7 +16,6 @@ class ClientTCP extends EventEmitter {
         this._options = options || {};
 
         this._isConnected = false;
-        this._jsonstream = null;
         this._requests = {};
         this._methods = [];
         this._eventsByName = null;
@@ -29,7 +25,7 @@ class ClientTCP extends EventEmitter {
      * Privates
      */
 
-     _getMethods(callback) {
+    _getMethods(callback) {
         this._request({
             method:'methods',
             callback:(err, methods) => {
@@ -39,7 +35,7 @@ class ClientTCP extends EventEmitter {
 
                 this._methods = methods;
 
-                for (let methodTitle in methods) {
+                for (const methodTitle in methods) {
                     this[methodTitle] = (...args) => {
                         if (typeof args[args.length-1] === 'function') {
                             this._request({
@@ -52,8 +48,8 @@ class ClientTCP extends EventEmitter {
                                 this._request({
                                     method:methodTitle,
                                     params:args[0]||undefined,
-                                    resolve:resolve,
-                                    reject:reject
+                                    resolve,
+                                    reject
                                 });
                             });
                         }
@@ -80,48 +76,27 @@ class ClientTCP extends EventEmitter {
         return this._eventsByName[eventName];
     }
 
-    _initializeJsonStream() {
-
-        let self = this;
-
-        this._jsonstream = JSONStream.parse();
-
-        this._jsonstream.on('data', (data) => {
-
-            let r = this._requests[data.id];
-
-            // no callback stored for this request ?
-            // fake id sent by the "server" ?
-            if (!r) {
-                if (data.error) {
-                    debug(JSON.stringify(data.error));
-                } else {
-                    debug(JSON.stringify(data));
-                }
-                this._emit("error", data.error);
-                return;
-            }
-
-            data.error && debug(data.error.message);
-
-            if (r.method === 'versions' && typeof data.result === 'object') {
-                data.result['sloki-node-client'] = version;
-            }
-
-            r.callback(data.error, data.result);
-            delete this._requests[data.id];
-        });
-    }
-
     _emit(eventName, data) {
         if (this._eventExists(eventName)) {
             this.emit(eventName, data);
         }
     }
 
+    _pipeSocket() {
+        // it may be overrided
+    }
+
+    _unpipeSocket() {
+        // it may be overrided
+    }
+
+    _initializeStream() {
+        throw new Error('Please override methode _initialize');
+    }
+
     _initializeSocket(callback) {
 
-        this._conn = net.connect(this._port, this._host);
+        this._conn = net.createConnection(this._port, this._host);
 
         this._conn.on('timeout', () => {
             this._emit('timeout');
@@ -132,54 +107,49 @@ class ClientTCP extends EventEmitter {
         this._conn.on('error', (err) => {
             callback(err);
             this._emit('error', err);
-            debug('onError', err.message);
+            debug('error', err.message);
+            this._unpipeSocket();
             this._conn.destroy();
         });
 
         this._conn.on('close', () => {
             this._emit('close');
             debug('close');
+            this._unpipeSocket();
             this._isConnected = false;
         });
 
         this._conn.on('end', () => {
             this._emit('end');
             debug('end');
+            this._unpipeSocket();
             this._isConnected = false;
+            this._conn.destroy();
         });
 
         this._conn.on('destroy', () => {
             this._emit('destroy');
             debug('destroy');
+            this._unpipeSocket();
             this._isConnected = false;
         });
 
         this._conn.on('connect', () => {
+            debug('connected');
             this._isConnected = true;
             this._getMethods(callback);
         });
 
-        this._conn.pipe(this._jsonstream);
+        this._pipeSocket();
     }
 
     _close() {
         this._isConnected = false;
-        this.conn.end();
+        this._conn.end();
     }
 
-    _requestSend(id, method, params) {
-
-        let req = {
-            jsonrpc:"2.0",
-            id,
-            method,
-            params
-        }
-
-        //@TODO: take a look at fastify to speed up stringify() ?
-        req = JSON.stringify(req);
-        this._conn.write(req);
-        debug(req);
+    _requestSend() {
+        throw new Error('Please override methode _requestSend');
     }
 
     _requestPush(id, method, params, callback) {
@@ -188,7 +158,7 @@ class ClientTCP extends EventEmitter {
             return;
         }
 
-        this._requests[id] = {method, params, callback};
+        this._requests[id] = { method, params, callback };
         this._requestSend(id, method, params);
     }
 
@@ -209,7 +179,7 @@ class ClientTCP extends EventEmitter {
      * Public
      */
     connect(callback) {
-        this._initializeJsonStream();
+        this._initializeStream();
         if (!callback) {
             return new Promise((resolve, reject) => {
                 this._initializeSocket((err) => {
@@ -244,7 +214,7 @@ class ClientTCP extends EventEmitter {
 
     getMethodDescription(method) {
         if (!this._methods[method]) {
-            return "method not found";
+            return 'method not found';
         }
 
         return this._methods[method].description;
@@ -252,4 +222,4 @@ class ClientTCP extends EventEmitter {
 
 }
 
-module.exports = ClientTCP;
+module.exports = TCP;
