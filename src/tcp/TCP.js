@@ -37,11 +37,19 @@ class TCP extends EventEmitter {
 
                 for (const methodTitle in methods) {
                     this[methodTitle] = (...args) => {
-                        if (typeof args[args.length-1] === 'function') {
+
+                        const lastArgType = args[args.length-1];
+
+                        if (typeof lastArgType === 'function') {
                             this._request({
                                 method:methodTitle,
                                 params:args[0]||undefined,
                                 callback:args[args.length-1]
+                            });
+                        } else if (typeof lastArgType === 'object' && lastArgType.lazy) {
+                            this._request({
+                                method:methodTitle,
+                                params:args[0]||undefined
                             });
                         } else {
                             return new Promise((resolve, reject) => {
@@ -165,13 +173,15 @@ class TCP extends EventEmitter {
     _request(op) {
         if (op.callback) {
             this._requestPush(uuid(), op.method, op.params, op.callback);
-        } else {
+        } else if (op.reject && op.resolve) {
             this._requestPush(uuid(), op.method, op.params, (err, result) => {
                 if (err) {
                     return op.reject(err);
                 }
                 op.resolve(result);
             });
+        } else {
+            this._requestSend(-1, op.method, op.params);
         }
     }
 
