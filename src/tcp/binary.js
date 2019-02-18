@@ -55,6 +55,8 @@ class Client extends TcpClient {
 
             r.callback(response.error, response.r);
             delete this._requests[response.id];
+
+            this._encoder.resume();
         });
 
         this._encoder = missive.encode({ deflate: DEFLATE });
@@ -76,6 +78,7 @@ class Client extends TcpClient {
             req.p = params;
         }
         this._encoder.write(req);
+        this._encoder.pause();
         debug('request', JSON.stringify(req));
     }
 
