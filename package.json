@@ -24,6 +24,7 @@
     "JSONStream": "^1.3.5",
     "async": "^2.6.1",
     "debug": "^4.1.1",
-    "hyperid": "^2.0.2"
+    "hyperid": "^2.0.2",
+    "missive": "sloki-project/missive"
   }
 }
