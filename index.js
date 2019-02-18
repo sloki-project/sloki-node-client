@@ -1,15 +1,12 @@
-const implementedTransports = ['tcp','tls'];
+const implementedTransports = ['tcp', 'tls'];
 const defaultOptions = {
-    applicationLayer:'jayson'
-}
+    engine:'binary'
+};
 
 function Client(url, options) {
-    let client;
-    let e = url.match(/^([^:]+)/);
+    const e = url.match(/^([^:]+)/);
     if (!e) {
-        throw new Error('URL must start with ' + implementedProtocols.join(',')+'');
-        process.exit(-1);
-        return;
+        throw new Error('URL must start with ' + implementedTransports.join(',')+'');
     }
 
     options = Object.assign(defaultOptions, options||{});
@@ -20,34 +17,38 @@ function Client(url, options) {
         transportLayer = e[1].toLowerCase();
         if (implementedTransports.indexOf(transportLayer)<0) {
             throw new Error('URL does not contain any implemented protocol (' + implementedTransports.join(',')+')');
-            return null;
         }
     }
 
-    if (transportLayer === "tls") {
-        throw new Error('Protocol '+proto+' not yet implemented');
-        process.exit(-1);
+    if (transportLayer === 'tls') {
+        throw new Error(`Protocol ${transportLayer} not yet implemented`);
     }
 
-    if (transportLayer === "tcp" || transportLayer === "tls") {
-        url = url.replace(/(tcp|tls):\/\//,'').split(':');
-        let host = url[0];
-        let port = parseInt(url[1]);
-        let myClient;
+    if (transportLayer === 'tcp' || transportLayer === 'tls') {
+        url = url.replace(/(tcp|tls):\/\//, '').split(':');
+        const host = url[0];
+        const port = parseInt(url[1]);
+        let MyClient;
 
         switch (transportLayer) {
-            case "tcp":
-                switch (options.applicationLayer) {
-                    case "jayson":
-                        MyClient = require('./src/tcpJayson');
-                        return new MyClient(port, host, options);
-                        break;
-                    default:
-                        throw new Error('Unknow application layer '+options.applicationLayer);
-                }
-            case "tls":
-                throw new Error('Transport layer TLS not yet implemented');
+        case 'tcp':
+            switch (options.engine) {
+            case 'jsonrpc':
+                MyClient = require('./src/tcp/jsonrpc');
+                break;
+            case 'binary':
+                MyClient = require('./src/tcp/binary');
+                break;
+            default:
+                throw new Error('Unknow application layer '+options.engine);
+            }
+            break;
+        case 'tls':
+            throw new Error('Transport layer TLS not yet implemented');
         }
+
+        return new MyClient(port, host, options);
+
     }
 }
 
