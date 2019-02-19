@@ -181,7 +181,9 @@ class TCP extends EventEmitter {
                 op.resolve(result);
             });
         } else {
-            this._requestSend(-1, op.method, op.params);
+            if (!op.params) op.params = {};
+            op.params.nr = 1;
+            this._requestSend(uuid(), op.method, op.params);
         }
     }
 
