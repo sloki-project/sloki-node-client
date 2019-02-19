@@ -16,6 +16,14 @@ class Client extends TcpClient {
      * Privates
      */
 
+    _pipeSocket() {
+        this._socket.pipe(this._jsonstream);
+    }
+
+    _unpipeSocket() {
+        this._socket.unpipe(this._jsonstream);
+    }
+
     _initializeStream() {
 
         this._jsonstream = JSONStream.parse();
@@ -56,7 +64,6 @@ class Client extends TcpClient {
             params
         };
 
-        //@TODO: take a look at fastify to speed up stringify() ?
         req = JSON.stringify(req);
         this._socket.write(req);
         debug(req);
