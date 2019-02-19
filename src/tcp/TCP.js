@@ -104,45 +104,45 @@ class TCP extends EventEmitter {
 
     _initializeSocket(callback) {
 
-        this._conn = net.createConnection(this._port, this._host);
+        this._socket = net.createConnection(this._port, this._host);
 
-        this._conn.on('timeout', () => {
+        this._socket.on('timeout', () => {
             this._emit('timeout');
             debug('onTimeout');
             this._close();
         });
 
-        this._conn.on('error', (err) => {
+        this._socket.on('error', (err) => {
             callback(err);
             this._emit('error', err);
             debug('error', err.message);
             this._unpipeSocket();
-            this._conn.destroy();
+            this._socket.destroy();
         });
 
-        this._conn.on('close', () => {
+        this._socket.on('close', () => {
             this._emit('close');
             debug('close');
             this._unpipeSocket();
             this._isConnected = false;
         });
 
-        this._conn.on('end', () => {
+        this._socket.on('end', () => {
             this._emit('end');
             debug('end');
             this._unpipeSocket();
             this._isConnected = false;
-            this._conn.destroy();
+            this._socket.destroy();
         });
 
-        this._conn.on('destroy', () => {
+        this._socket.on('destroy', () => {
             this._emit('destroy');
             debug('destroy');
             this._unpipeSocket();
             this._isConnected = false;
         });
 
-        this._conn.on('connect', () => {
+        this._socket.on('connect', () => {
             debug('connected');
             this._isConnected = true;
             this._getMethods(callback);
@@ -153,7 +153,7 @@ class TCP extends EventEmitter {
 
     _close() {
         this._isConnected = false;
-        this._conn.end();
+        this._socket.end();
     }
 
     _requestSend() {
@@ -211,7 +211,7 @@ class TCP extends EventEmitter {
             if (pendingRequests>0) {
                 debug(`closing client, but missed ${pendingRequests} pending requests`);
             }
-            this._conn.end();
+            this._socket.end();
             if (callback) {
                 callback();
             }

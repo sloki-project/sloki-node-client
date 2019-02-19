@@ -3,7 +3,7 @@ const debug = require('debug')('sloki-client');
 const version = require('../../package.json').version;
 const TcpClient = require('./TCP');
 
-const DEFLATE = false;
+const ZLIB = false;
 
 class Client extends TcpClient {
 
@@ -20,7 +20,7 @@ class Client extends TcpClient {
 
     _initializeStream() {
 
-        this._decoder = missive.parse({ inflate: true });
+        this._decoder = missive.parse({ inflate: ZLIB });
 
         this._decoder.on('message', response => {
 
@@ -56,20 +56,19 @@ class Client extends TcpClient {
             r.callback(response.error, response.r);
             delete this._requests[response.id];
 
-            this._encoder.resume();
         });
 
-        this._encoder = missive.encode({ deflate: DEFLATE });
+        this._encoder = missive.encode({ deflate:ZLIB });
     }
 
     _pipeSocket() {
-        this._conn.pipe(this._decoder);
-        this._encoder.pipe(this._conn);
+        this._socket.pipe(this._decoder);
+        this._encoder.pipe(this._socket);
     }
 
     _unpipeSocket() {
-        this._conn.unpipe(this._decoder);
-        this._encoder.unpipe(this._conn);
+        this._socket.unpipe(this._decoder);
+        this._encoder.unpipe(this._socket);
     }
 
     _requestSend(id, method, params) {
@@ -78,7 +77,6 @@ class Client extends TcpClient {
             req.p = params;
         }
         this._encoder.write(req);
-        this._encoder.pause();
         debug('request', JSON.stringify(req));
     }
 

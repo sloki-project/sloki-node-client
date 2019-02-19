@@ -58,7 +58,7 @@ class Client extends TcpClient {
 
         //@TODO: take a look at fastify to speed up stringify() ?
         req = JSON.stringify(req);
-        this._conn.write(req);
+        this._socket.write(req);
         debug(req);
     }
 }
