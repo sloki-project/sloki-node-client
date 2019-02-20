@@ -4,6 +4,11 @@ const defaultOptions = {
 };
 
 function Client(url, options) {
+
+    if (!url) {
+        throw new Error('no client url specified (i.e tcp://localhost:6370)');
+    }
+
     const e = url.match(/^([^:]+)/);
     if (!e) {
         throw new Error('URL must start with ' + implementedTransports.join(',')+'');
