@@ -35,6 +35,8 @@ function Client(url, options) {
         const port = parseInt(url[1]);
         let MyClient;
 
+        options.engine = options.engine.replace(/^(tcp|tls)/, '');
+
         switch (transportLayer) {
         case 'tcp':
             switch (options.engine) {
