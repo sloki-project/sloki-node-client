@@ -7,7 +7,7 @@ const debug = require('debug')('sloki-client');
 const hyperid = require('hyperid');
 const uuid = hyperid(true);
 
-class TCP extends EventEmitter {
+class BaseClient extends EventEmitter {
 
     constructor(port, host, options) {
         super();
@@ -15,6 +15,7 @@ class TCP extends EventEmitter {
         this._port = port;
         this._host = host;
         this._options = options || {};
+        this._options.tls = this._options.protocol.match(/s$/);
 
         this._isConnected = false;
         this._requests = {};
@@ -121,7 +122,10 @@ class TCP extends EventEmitter {
             });
 
         } else {
-            this._socket = net.connect(this._port, this._host);
+            this._socket = net.connect({
+                port:this._port,
+                host:this._host
+            });
 
             this._socket.on('connect', () => {
                 debug('connected');
@@ -131,8 +135,13 @@ class TCP extends EventEmitter {
         }
 
         this._socket.on('timeout', () => {
+            debug('timeout');
+            if (!this._isConnected) {
+                this._socket.destroy();
+                callback('timeout');
+                return;
+            }
             this._emit('timeout');
-            debug('onTimeout');
             this._close();
         });
 
@@ -252,4 +261,4 @@ class TCP extends EventEmitter {
 
 }
 
-module.exports = TCP;
+module.exports = BaseClient;

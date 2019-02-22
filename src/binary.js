@@ -1,17 +1,14 @@
 const missive = require('missive');
 const debug = require('debug')('sloki-client');
-const version = require('../../package.json').version;
-const TcpClient = require('./TCP');
+const version = require('../package.json').version;
+const BaseClient = require('./BaseClient');
 
 const ZLIB = false;
 
-class Client extends TcpClient {
+class BinaryClient extends BaseClient {
 
-    constructor(port, host, options) {
-        super();
-        this._port = port;
-        this._host = host;
-        this._options = options || {};
+    constructor() {
+        super(...arguments);
     }
 
     /*
@@ -82,4 +79,4 @@ class Client extends TcpClient {
 
 }
 
-module.exports = Client;
+module.exports = BinaryClient;

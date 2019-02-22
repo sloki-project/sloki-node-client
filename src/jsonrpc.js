@@ -1,15 +1,12 @@
 const JSONStream = require('JSONStream');
 const debug = require('debug')('sloki-client');
-const version = require('../../package.json').version;
-const TcpClient = require('./TCP');
+const version = require('../package.json').version;
+const Client = require('./BaseClient');
 
-class Client extends TcpClient {
+class MyClient extends Client {
 
-    constructor(port, host, options) {
-        super();
-        this._port = port;
-        this._host = host;
-        this._options = options || {};
+    constructor() {
+        super(...arguments);
     }
 
     /*
@@ -70,4 +67,4 @@ class Client extends TcpClient {
     }
 }
 
-module.exports = Client;
+module.exports = MyClient;
