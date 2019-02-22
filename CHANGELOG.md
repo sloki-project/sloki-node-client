@@ -5,6 +5,7 @@
 ### Added
 * add getMethodsName() [#3](https://github.com/sloki-project/sloki-node-client/issues/3)
 * add getMethodDescription() [#4](https://github.com/sloki-project/sloki-node-client/issues/4)
+* TLS clients [#7](https://github.com/sloki-project/sloki-node-client/issues/7)
 
 ### Changed
 * use named parameters in jsonrpc layer [#6](https://github.com/sloki-project/sloki-node-client/issues/6)

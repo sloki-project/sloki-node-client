@@ -1,4 +1,5 @@
 const net = require('net');
+const tls = require('tls');
 const EventEmitter = require('events');
 const debug = require('debug')('sloki-client');
 
@@ -36,6 +37,9 @@ class TCP extends EventEmitter {
                 this._methods = methods;
 
                 for (const methodTitle in methods) {
+
+                    debug(`register method ${methodTitle}`);
+
                     this[methodTitle] = (...args) => {
 
                         const lastArgType = args[args.length-1];
@@ -104,7 +108,27 @@ class TCP extends EventEmitter {
 
     _initializeSocket(callback) {
 
-        this._socket = net.createConnection(this._port, this._host);
+        if (this._options.tls) {
+            this._socket = tls.connect(this._port, this.host, {
+                secureProtocol: 'TLSv1_2_method',
+                rejectUnauthorized: false,
+            });
+
+            this._socket.on('secureConnect', () => {
+                debug('connected (secure)');
+                this._isConnected = true;
+                this._getMethods(callback);
+            });
+
+        } else {
+            this._socket = net.connect(this._port, this._host);
+
+            this._socket.on('connect', () => {
+                debug('connected');
+                this._isConnected = true;
+                this._getMethods(callback);
+            });
+        }
 
         this._socket.on('timeout', () => {
             this._emit('timeout');
@@ -140,12 +164,6 @@ class TCP extends EventEmitter {
             debug('destroy');
             this._unpipeSocket();
             this._isConnected = false;
-        });
-
-        this._socket.on('connect', () => {
-            debug('connected');
-            this._isConnected = true;
-            this._getMethods(callback);
         });
 
         this._pipeSocket();

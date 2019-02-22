@@ -25,10 +25,6 @@ function Client(url, options) {
         }
     }
 
-    if (transportLayer === 'tls') {
-        throw new Error(`Protocol ${transportLayer} not yet implemented`);
-    }
-
     if (transportLayer === 'tcp' || transportLayer === 'tls') {
         url = url.replace(/(tcp|tls):\/\//, '').split(':');
         const host = url[0];
@@ -37,21 +33,19 @@ function Client(url, options) {
 
         options.engine = options.engine.replace(/^(tcp|tls)/, '');
 
-        switch (transportLayer) {
-        case 'tcp':
-            switch (options.engine) {
-            case 'jsonrpc':
-                MyClient = require('./src/tcp/jsonrpc');
-                break;
-            case 'binary':
-                MyClient = require('./src/tcp/binary');
-                break;
-            default:
-                throw new Error('Unknow application layer '+options.engine);
-            }
+        switch (options.engine) {
+        case 'jsonrpc':
+            MyClient = require('./src/tcp/jsonrpc');
             break;
-        case 'tls':
-            throw new Error('Transport layer TLS not yet implemented');
+        case 'binary':
+            MyClient = require('./src/tcp/binary');
+            break;
+        default:
+            throw new Error('Unknow application layer '+options.engine);
+        }
+
+        if (transportLayer === 'tls') {
+            options.tls = true;
         }
 
         return new MyClient(port, host, options);
