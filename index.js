@@ -1,56 +1,54 @@
-const implementedTransports = ['tcp', 'tls'];
-const defaultOptions = {
-    engine:'binary'
-};
+const implementedTransports = [
+    'tcp',      // alias for binary
+    'tls',      // alias for binarys
+    'binary',
+    'binarys',
+    'jsonrpc',
+    'jsonrpcs'
+];
 
 function Client(url, options) {
 
     if (!url) {
-        throw new Error('no client url specified (i.e tcp://localhost:6370)');
+        throw new Error('no endpoint specified (i.e tcp://localhost)');
     }
 
     const e = url.match(/^([^:]+)/);
     if (!e) {
-        throw new Error('URL must start with ' + implementedTransports.join(',')+'');
+        throw new Error(`endpoint must start with ${implementedTransports.join(',')}`);
     }
 
-    options = Object.assign(defaultOptions, options||{});
+    options = options||{};
 
-    let transportLayer;
-
-    if (e) {
-        transportLayer = e[1].toLowerCase();
-        if (implementedTransports.indexOf(transportLayer)<0) {
-            throw new Error('URL does not contain any implemented protocol (' + implementedTransports.join(',')+')');
-        }
+    options.protocol = e[1].toLowerCase();
+    if (implementedTransports.indexOf(options.protocol)<0) {
+        throw new Error(`endpoint does not contain any implemented protocol ${implementedTransports.join(',')}`);
     }
 
-    if (transportLayer === 'tcp' || transportLayer === 'tls') {
-        url = url.replace(/(tcp|tls):\/\//, '').split(':');
-        const host = url[0];
-        const port = parseInt(url[1]);
-        let MyClient;
-
-        options.engine = options.engine.replace(/^(tcp|tls)/, '');
-
-        switch (options.engine) {
-        case 'jsonrpc':
-            MyClient = require('./src/tcp/jsonrpc');
-            break;
-        case 'binary':
-            MyClient = require('./src/tcp/binary');
-            break;
-        default:
-            throw new Error('Unknow application layer '+options.engine);
-        }
-
-        if (transportLayer === 'tls') {
-            options.tls = true;
-        }
-
-        return new MyClient(port, host, options);
-
+    if (options.protocol === 'tcp') {
+        options.protocol = 'binary';
     }
+
+    if (options.protocol === 'tls') {
+        options.protocol = 'binarys';
+    }
+
+    url = url.replace(/^[^:]+:\/\//, '').split(':');
+    const host = url[0];
+    const port = parseInt(url[1]);
+
+    let MyClient;
+
+    if (options.protocol.match(/jsonrpc/)) {
+        MyClient = require('./src/jsonrpc');
+    } else if (options.protocol.match(/binary/)) {
+        MyClient = require('./src/binary');
+    } else {
+        throw new Error(`Unknow protocol ${options.protocol}`);
+    }
+
+    return new MyClient(port, host, options);
+
 }
 
 module.exports = Client;
