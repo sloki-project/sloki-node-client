@@ -5,8 +5,15 @@ const Client = require('./BaseClient');
 
 class MyClient extends Client {
 
-    constructor() {
-        super(...arguments);
+    constructor(port, host, options) {
+        if (!port) {
+            if (options.protocol.match(/s$/)) {
+                port = 6373;
+            } else {
+                port = 6372;
+            }
+        }
+        super(port, host, options);
     }
 
     /*

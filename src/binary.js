@@ -7,8 +7,15 @@ const ZLIB = false;
 
 class BinaryClient extends BaseClient {
 
-    constructor() {
-        super(...arguments);
+    constructor(port, host, options) {
+        if (!port) {
+            if (options.protocol.match(/s$/)) {
+                port = 6371;
+            } else {
+                port = 6370;
+            }
+        }
+        super(port, host, options);
     }
 
     /*
