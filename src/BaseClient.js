@@ -134,6 +134,8 @@ class BaseClient extends EventEmitter {
             });
         }
 
+        this._socket.setNoDelay(true);
+
         this._socket.on('timeout', () => {
             debug('timeout');
             if (!this._isConnected) {
