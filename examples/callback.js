@@ -1,4 +1,4 @@
-const Client = require('../')
+const Client = require('../');
 const async = require('async');
 
 const client = new Client('tcp://127.0.0.1:6370');
@@ -11,7 +11,7 @@ async.waterfall([
         client.loadDatabase({ database:'myTestDatabase' }, next);
     },
     (db, next) => {
-        client.insert({ collection:'devices', document:{'foo':'bar'} }, next);
+        client.insert({ collection:'devices', document:{ 'foo':'bar' } }, next);
     },
     (result, next) => {
         client.find({ collection:'devices' }, next);
@@ -20,7 +20,7 @@ async.waterfall([
         console.log(devices);
         client.close(next);
     }
-],(err) => {
+], (err) => {
     if (err) {
         console.log(err);
     }
