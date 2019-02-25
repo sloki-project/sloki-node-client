@@ -107,45 +107,45 @@ class BaseClient extends EventEmitter {
         throw new Error('Please override methode _initialize');
     }
 
+    _onConnect(callback) {
+        debug('connected');
+        this._isConnected = true;
+        this._getMethods(callback);
+    }
+
+    _onTimeout() {
+        debug('timeout');
+        this._emit('timeout');
+        this._close();
+    }
+
+    _tlsConnect(callback) {
+        return tls.connect(this._port, this.host, {
+            secureProtocol: 'TLSv1_2_method',
+            rejectUnauthorized: false,
+        }, () => {
+            this._onConnect(callback);
+        });
+    }
+
+    _tcpConnect(callback) {
+        return net.connect({
+            port:this._port,
+            host:this._host
+        }, () => {
+            this._onConnect(callback);
+        });
+    }
+
     _initializeSocket(callback) {
 
         if (this._options.tls) {
-            this._socket = tls.connect(this._port, this.host, {
-                secureProtocol: 'TLSv1_2_method',
-                rejectUnauthorized: false,
-            });
-
-            this._socket.on('secureConnect', () => {
-                debug('connected (secure)');
-                this._isConnected = true;
-                this._getMethods(callback);
-            });
-
+            this._socket = this._tlsConnect(callback);
         } else {
-            this._socket = net.connect({
-                port:this._port,
-                host:this._host
-            });
-
-            this._socket.on('connect', () => {
-                debug('connected');
-                this._isConnected = true;
-                this._getMethods(callback);
-            });
+            this._socket = this._tcpConnect(callback);
         }
 
-        this._socket.setNoDelay(true);
-
-        this._socket.on('timeout', () => {
-            debug('timeout');
-            if (!this._isConnected) {
-                this._socket.destroy();
-                callback('timeout');
-                return;
-            }
-            this._emit('timeout');
-            this._close();
-        });
+        this._socket.on('timeout', this._onTimeout);
 
         this._socket.on('error', (err) => {
             callback(err);
@@ -182,7 +182,7 @@ class BaseClient extends EventEmitter {
 
     _close() {
         this._isConnected = false;
-        this._socket.end();
+        this._socket.destroy();
     }
 
     _requestSend() {
