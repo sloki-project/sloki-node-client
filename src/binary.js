@@ -1,11 +1,11 @@
 const missive = require('missive');
 const debug = require('debug')('sloki-client');
 const version = require('../package.json').version;
-const BaseClient = require('./BaseClient');
+const Client = require('./lib/Client');
 
 const ZLIB = false;
 
-class BinaryClient extends BaseClient {
+class BinaryClient extends Client {
 
     constructor(port, host, options) {
         if (!port) {

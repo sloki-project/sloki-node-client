@@ -1,7 +1,7 @@
 const JSONStream = require('JSONStream');
 const debug = require('debug')('sloki-client');
 const version = require('../package.json').version;
-const Client = require('./BaseClient');
+const Client = require('./lib/Client');
 
 class MyClient extends Client {
 
