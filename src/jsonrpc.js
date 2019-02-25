@@ -20,12 +20,12 @@ class MyClient extends Client {
      * Privates
      */
 
-    _pipeSocket() {
-        this._socket.pipe(this._jsonstream);
+    _pipeSocket(socket) {
+        socket.pipe(this._jsonstream);
     }
 
-    _unpipeSocket() {
-        this._socket.unpipe(this._jsonstream);
+    _unpipeSocket(socket) {
+        socket.unpipe(this._jsonstream);
     }
 
     _initializeStream() {

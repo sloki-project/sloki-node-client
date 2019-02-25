@@ -151,21 +151,21 @@ class BaseClient extends EventEmitter {
             callback(err);
             this._emit('error', err);
             debug('error', err.message);
-            this._unpipeSocket();
+            this._unpipeSocket(this._socket);
             this._socket.destroy();
         });
 
         this._socket.on('close', () => {
             this._emit('close');
             debug('close');
-            this._unpipeSocket();
+            this._unpipeSocket(this._socket);
             this._isConnected = false;
         });
 
         this._socket.on('end', () => {
             this._emit('end');
             debug('end');
-            this._unpipeSocket();
+            this._unpipeSocket(this._socket);
             this._isConnected = false;
             this._socket.destroy();
         });
@@ -173,11 +173,11 @@ class BaseClient extends EventEmitter {
         this._socket.on('destroy', () => {
             this._emit('destroy');
             debug('destroy');
-            this._unpipeSocket();
+            this._unpipeSocket(this._socket);
             this._isConnected = false;
         });
 
-        this._pipeSocket();
+        this._pipeSocket(this._socket);
     }
 
     _close() {

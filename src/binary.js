@@ -65,14 +65,14 @@ class BinaryClient extends Client {
         this._encoder = missive.encode({ deflate:ZLIB });
     }
 
-    _pipeSocket() {
-        this._socket.pipe(this._decoder);
-        this._encoder.pipe(this._socket);
+    _pipeSocket(socket) {
+        socket.pipe(this._decoder);
+        this._encoder.pipe(socket);
     }
 
-    _unpipeSocket() {
-        this._socket.unpipe(this._decoder);
-        this._encoder.unpipe(this._socket);
+    _unpipeSocket(socket) {
+        socket.unpipe(this._decoder);
+        this._encoder.unpipe(socket);
     }
 
     _requestSend(id, method, params) {
