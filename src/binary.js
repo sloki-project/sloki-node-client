@@ -16,13 +16,11 @@ class BinaryClient extends Client {
             }
         }
         super(port, host, options);
+        this._decoder = null;
+        this._encoder = null;
     }
 
-    /*
-     * Privates
-     */
-
-    _initializeStream() {
+    initializeStream() {
 
         this._decoder = missive.parse({ inflate: ZLIB });
 
@@ -65,23 +63,23 @@ class BinaryClient extends Client {
         this._encoder = missive.encode({ deflate:ZLIB });
     }
 
-    _pipeSocket(socket) {
+    pipeSocket(socket) {
         socket.pipe(this._decoder);
         this._encoder.pipe(socket);
     }
 
-    _unpipeSocket(socket) {
+    unpipeSocket(socket) {
         socket.unpipe(this._decoder);
         this._encoder.unpipe(socket);
     }
 
-    _requestSend(id, method, params) {
+    requestSend(id, method, params) {
         const req = { id, m:method };
         if (params) {
             req.p = params;
         }
         this._encoder.write(req);
-        debug('request', JSON.stringify(req));
+        //debug('request', JSON.stringify(req));
     }
 
 }

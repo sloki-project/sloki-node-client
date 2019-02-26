@@ -27,8 +27,8 @@ class BaseClient extends EventEmitter {
      * Privates
      */
 
-    _getMethods(callback) {
-        this._request({
+    getMethods(callback) {
+        this.request({
             method:'methods',
             callback:(err, methods) => {
                 if (err) {
@@ -46,19 +46,19 @@ class BaseClient extends EventEmitter {
                         const lastArgType = args[args.length-1];
 
                         if (typeof lastArgType === 'function') {
-                            this._request({
+                            this.request({
                                 method:methodTitle,
                                 params:args[0]||undefined,
                                 callback:args[args.length-1]
                             });
                         } else if (typeof lastArgType === 'object' && lastArgType.lazy) {
-                            this._request({
+                            this.request({
                                 method:methodTitle,
                                 params:args[0]||undefined
                             });
                         } else {
                             return new Promise((resolve, reject) => {
-                                this._request({
+                                this.request({
                                     method:methodTitle,
                                     params:args[0]||undefined,
                                     resolve,
@@ -73,7 +73,7 @@ class BaseClient extends EventEmitter {
         });
     }
 
-    _eventExists(eventName) {
+    eventExists(eventName) {
 
         if (this._eventsByName) {
             return this._eventsByName[eventName];
@@ -89,121 +89,111 @@ class BaseClient extends EventEmitter {
         return this._eventsByName[eventName];
     }
 
-    _emit(eventName, data) {
-        if (this._eventExists(eventName)) {
+    emitEvent(eventName, data) {
+        if (this.eventExists(eventName)) {
             this.emit(eventName, data);
         }
     }
 
-    _pipeSocket() {
-        // it may be overrided
-    }
-
-    _unpipeSocket() {
-        // it may be overrided
-    }
-
-    _initializeStream() {
-        throw new Error('Please override methode _initialize');
-    }
-
-    _onConnect(callback) {
-        debug('connected');
-        this._isConnected = true;
-        this._getMethods(callback);
-    }
-
-    _onTimeout() {
-        debug('timeout');
-        this._emit('timeout');
-        this._close();
-    }
-
-    _tlsConnect(callback) {
+    tlsConnect(callback) {
         return tls.connect(this._port, this.host, {
             secureProtocol: 'TLSv1_2_method',
             rejectUnauthorized: false,
         }, () => {
-            this._onConnect(callback);
+            this.onConnect(callback);
         });
     }
 
-    _tcpConnect(callback) {
+    tcpConnect(callback) {
         return net.connect({
             port:this._port,
             host:this._host
         }, () => {
-            this._onConnect(callback);
+            this.onConnect(callback);
         });
     }
 
-    _initializeSocket(callback) {
-
-        if (this._options.tls) {
-            this._socket = this._tlsConnect(callback);
-        } else {
-            this._socket = this._tcpConnect(callback);
-        }
-
-        this._socket.on('timeout', this._onTimeout);
-
-        this._socket.on('error', (err) => {
-            callback(err);
-            this._emit('error', err);
-            debug('error', err.message);
-            this._unpipeSocket(this._socket);
-            this._socket.destroy();
-        });
-
-        this._socket.on('close', () => {
-            this._emit('close');
-            debug('close');
-            this._unpipeSocket(this._socket);
-            this._isConnected = false;
-        });
-
-        this._socket.on('end', () => {
-            this._emit('end');
-            debug('end');
-            this._unpipeSocket(this._socket);
-            this._isConnected = false;
-            this._socket.destroy();
-        });
-
-        this._socket.on('destroy', () => {
-            this._emit('destroy');
-            debug('destroy');
-            this._unpipeSocket(this._socket);
-            this._isConnected = false;
-        });
-
-        this._pipeSocket(this._socket);
+    onConnect(callback) {
+        debug('connected');
+        this._isConnected = true;
+        this.getMethods(callback);
     }
 
-    _close() {
+    onSocketTimeout() {
+        debug('timeout');
+        this.emitEvent('timeout');
+        this.close();
+    }
+
+    onSocketClose() {
+        debug('close');
+        this.emitEvent('close');
+        this.unpipeSocket(this._socket);
+        this._isConnected = false;
+    }
+
+    onSocketEnd() {
+        debug('end');
+        this.emitEvent('end');
+        this.unpipeSocket(this._socket);
         this._isConnected = false;
         this._socket.destroy();
     }
 
-    _requestSend() {
-        throw new Error('Please override methode _requestSend');
+    onSocketDestroy() {
+        debug('destroy');
+        this.emitEvent('destroy');
+        this.unpipeSocket(this._socket);
+        this._isConnected = false;
     }
 
-    _requestPush(id, method, params, callback) {
+    onSocketclose() {
+        this._isConnected = false;
+        this._socket.destroy();
+    }
+
+    initializeSocket(callback) {
+
+        let s;
+
+        if (this._options.tls) {
+            s = this.tlsConnect(callback);
+        } else {
+            s = this.tcpConnect(callback);
+        }
+
+        s.on('timeout', this.onSocketTimeout.bind(this));
+        s.on('close', this.onSocketClose.bind(this));
+        s.on('end', this.onSocketEnd.bind(this));
+        s.on('destroy', this.onSocketDestroy.bind(this));
+
+        s.on('error', (err) => {
+            debug('error', err.message);
+            callback(err);
+            this.emitEvent('error', err);
+            this.unpipeSocket(this._socket);
+            s.destroy();
+        });
+
+        this._socket = s;
+        this.pipeSocket(s);
+    }
+
+    requestPush(id, method, params, callback) {
         if (!this._isConnected) {
             callback(new Error('not connected'));
             return;
         }
 
         this._requests[id] = { method, params, callback };
-        this._requestSend(id, method, params);
+        this.requestSend(id, method, params);
     }
 
-    _request(op) {
+    request(op) {
         if (op.callback) {
-            this._requestPush(uuid(), op.method, op.params, op.callback);
+            this.requestPush(uuid(), op.method, op.params, op.callback);
         } else if (op.reject && op.resolve) {
-            this._requestPush(uuid(), op.method, op.params, (err, result) => {
+            this.requestPush(uuid(), op.method, op.params, (err, result) => {
                 if (err) {
                     return op.reject(err);
                 }
@@ -212,18 +202,41 @@ class BaseClient extends EventEmitter {
         } else {
             if (!op.params) op.params = {};
             op.params.nr = 1;
-            this._requestSend(uuid(), op.method, op.params);
+            this.requestSend(uuid(), op.method, op.params);
         }
     }
 
     /*
-     * Public
+     * Public methods
      */
+
+    pipeSocket(socket) {
+        // it may be overrided
+        if (!socket) {
+            throw new Error('No socket passed into function pipeSocket()');
+        }
+    }
+
+    unpipeSocket(socket) {
+        // it may be overrided
+        if (!socket) {
+            throw new Error('No socket passed into function unpipeSocket()');
+        }
+    }
+
+    initializeStream() {
+        throw new Error('Please override methode _initialize');
+    }
+
+    requestSend() {
+        throw new Error('Please override methode _requestSend');
+    }
+
     connect(callback) {
-        this._initializeStream();
+        this.initializeStream();
         if (!callback) {
             return new Promise((resolve, reject) => {
-                this._initializeSocket((err) => {
+                this.initializeSocket((err) => {
                     if (err) {
                         return reject(err);
                     }
@@ -232,7 +245,7 @@ class BaseClient extends EventEmitter {
             });
         }
 
-        this._initializeSocket(callback);
+        this.initializeSocket(callback);
 
     }
 

@@ -14,21 +14,18 @@ class MyClient extends Client {
             }
         }
         super(port, host, options);
+        this._jsonstream = null;
     }
 
-    /*
-     * Privates
-     */
-
-    _pipeSocket(socket) {
+    pipeSocket(socket) {
         socket.pipe(this._jsonstream);
     }
 
-    _unpipeSocket(socket) {
+    unpipeSocket(socket) {
         socket.unpipe(this._jsonstream);
     }
 
-    _initializeStream() {
+    initializeStream() {
 
         this._jsonstream = JSONStream.parse();
 
@@ -59,7 +56,7 @@ class MyClient extends Client {
         });
     }
 
-    _requestSend(id, method, params) {
+    requestSend(id, method, params) {
 
         let req = {
             jsonrpc:'2.0',
@@ -70,7 +67,7 @@ class MyClient extends Client {
 
         req = JSON.stringify(req);
         this._socket.write(req);
-        debug(req);
+        //debug(req);
     }
 }
 
