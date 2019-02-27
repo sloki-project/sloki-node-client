@@ -43,15 +43,15 @@ class BaseClient extends EventEmitter {
 
                     this[methodTitle] = (...args) => {
 
-                        const lastArgType = args[args.length-1];
+                        const lastArg = args[args.length-1];
 
-                        if (typeof lastArgType === 'function') {
+                        if (typeof lastArg === 'function') {
                             this.request({
                                 method:methodTitle,
                                 params:args[0]||undefined,
-                                callback:args[args.length-1]
+                                callback:lastArg
                             });
-                        } else if (typeof lastArgType === 'object' && lastArgType.lazy) {
+                        } else if (lastArg != null && typeof lastArg === 'object' && lastArg.lazy) {
                             this.request({
                                 method:methodTitle,
                                 params:args[0]||undefined
