@@ -41,7 +41,7 @@ class BinaryClient extends Client {
                 } else {
                     debug(JSON.stringify(response));
                 }
-                this._emit('error', response.error);
+                this.emit('error', response.error);
                 return;
             }
 
