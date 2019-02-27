@@ -41,7 +41,7 @@ class MyClient extends Client {
                 } else {
                     debug(JSON.stringify(data));
                 }
-                this.emit('error', data.error);
+                this.emitEvent('error', data.error);
                 return;
             }
 
