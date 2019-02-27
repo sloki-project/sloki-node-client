@@ -2,6 +2,7 @@ const net = require('net');
 const tls = require('tls');
 const EventEmitter = require('events');
 const debug = require('debug')('sloki-client');
+const version = require('../../package.json').version;
 
 // fastest uuid generator for sloki
 const hyperid = require('hyperid');
@@ -12,10 +13,30 @@ class BaseClient extends EventEmitter {
     constructor(port, host, options) {
         super();
 
+        this._options = options || { protocol:'binarys' };
+        this._options.tls = this._options.protocol.match(/s$/);
+
+        if (!port) {
+            switch (this._options.protocol) {
+            case 'binary':
+            case 'tcp':
+                port = 6370;
+                break;
+            case 'binarys':
+            case 'tls':
+                port = 6371;
+                break;
+            case 'jsonrpc':
+                port = 6372;
+                break;
+            case 'jsonrpcs':
+                port = 6373;
+                break;
+            }
+        }
+
         this._port = port;
         this._host = host;
-        this._options = options || {};
-        this._options.tls = this._options.protocol.match(/s$/);
 
         this._isConnected = false;
         this._requests = {};
@@ -272,6 +293,50 @@ class BaseClient extends EventEmitter {
         }
 
         return this._methods[method].description;
+    }
+
+    onMessage(response) {
+
+        if (!response.id) {
+            debug(`response message don't have any id ! ${JSON.stringify(response)}`);
+            return;
+        }
+
+        const r = this._requests[response.id];
+
+        // no callback stored for this request ?
+        // fake id sent by the "server" ?
+        if (!r) {
+            if (response.error) {
+                debug(JSON.stringify(response.error));
+            } else {
+                debug(JSON.stringify(response));
+            }
+            this.emitEvent('error', response.error);
+            return;
+        }
+
+        if (process.env.DEBUG || process.env.NODE_ENV === 'dev') {
+            if (response.error) {
+                debug(response.error.message);
+            }
+
+            if (r.method != 'methods') {
+                debug('response', JSON.stringify(response));
+            }
+        }
+
+        if (r.method === 'versions') {
+            if (typeof response.r === 'object') {
+                response.r['sloki-node-client'] = version;
+            }
+            if (typeof response.result === 'object') {
+                response.result['sloki-node-client'] = version;
+            }
+        }
+
+        r.callback(response.error, response.r || response.result);
+        delete this._requests[response.id];
     }
 
 }
