@@ -29,30 +29,30 @@ class MyClient extends Client {
 
         this._jsonstream = JSONStream.parse();
 
-        this._jsonstream.on('data', (data) => {
+        this._jsonstream.on('data', (response) => {
 
-            const r = this._requests[data.id];
+            const r = this._requests[response.id];
 
             // no callback stored for this request ?
             // fake id sent by the "server" ?
             if (!r) {
-                if (data.error) {
-                    debug(JSON.stringify(data.error));
+                if (response.error) {
+                    debug(JSON.stringify(response.error));
                 } else {
-                    debug(JSON.stringify(data));
+                    debug(JSON.stringify(response));
                 }
-                this.emitEvent('error', data.error);
+                this.emitEvent('error', response.error);
                 return;
             }
 
-            data.error && debug(data.error.message);
+            response.error && debug(response.error.message);
 
-            if (r.method === 'versions' && typeof data.result === 'object') {
-                data.result['sloki-node-client'] = version;
+            if (r.method === 'versions' && typeof response.result === 'object') {
+                response.result['sloki-node-client'] = version;
             }
 
-            r.callback(data.error, data.result);
-            delete this._requests[data.id];
+            r.callback(response.error, response.result);
+            delete this._requests[response.id];
         });
     }
 
