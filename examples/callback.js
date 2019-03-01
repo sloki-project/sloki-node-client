@@ -1,24 +1,24 @@
 const Client = require('../');
 const async = require('async');
 
-const clientTcp = new Client('tcp://127.0.0.1:6370');
+const client = new Client('tcp://127.0.0.1:6370');
 
 async.waterfall([
     (next) => {
-        clientTcp.connect(next);
+        client.connect(next);
     },
     (next) => {
-        clientTcp.loadDatabase({ database:'myTestDatabase' }, next);
+        client.loadDatabase({ database:'myTestDatabase' }, next);
     },
     (db, next) => {
-        clientTcp.insert({ collection:'devices', document:{ 'foo':'bar' } }, next);
+        client.insert({ collection:'devices', document:{ 'foo':'bar' } }, next);
     },
     (result, next) => {
-        clientTcp.find({ collection:'devices' }, next);
+        client.find({ collection:'devices' }, next);
     },
     (devices, next) => {
         console.log(devices);
-        clientTcp.close(next);
+        client.close(next);
     }
 ], (err) => {
     if (err) {
