@@ -14,6 +14,7 @@ class BaseClient extends EventEmitter {
         super();
 
         this._options = options || { protocol:'binarys' };
+        this.protocol = this._options.protocol;
         this._options.tls = this._options.protocol.match(/s$/);
 
         if (!port) {
@@ -32,6 +33,12 @@ class BaseClient extends EventEmitter {
             case 'jsonrpcs':
                 port = 6373;
                 break;
+            case 'dinary':
+                port = 6374;
+                break;
+            case 'dinarys':
+                port = 6375;
+                break;
             }
         }
 
@@ -48,6 +55,46 @@ class BaseClient extends EventEmitter {
      * Privates
      */
 
+    registerMethods(obj, methods) {
+        if (!methods) {
+            methods = this._methods;
+        } else {
+            this._methods = methods;
+        }
+
+        for (const methodTitle in methods) {
+
+            debug(`register method ${methodTitle}`);
+
+            obj[methodTitle] = (...args) => {
+
+                const lastArg = args[args.length-1];
+
+                if (typeof lastArg === 'function') {
+                    this.request({
+                        method:methodTitle,
+                        params:args[0]||undefined,
+                        callback:lastArg
+                    });
+                } else if (lastArg != null && typeof lastArg === 'object' && lastArg.lazy) {
+                    this.request({
+                        method:methodTitle,
+                        params:args[0]||undefined
+                    });
+                } else {
+                    return new Promise((resolve, reject) => {
+                        this.request({
+                            method:methodTitle,
+                            params:args[0]||undefined,
+                            resolve,
+                            reject
+                        });
+                    });
+                }
+            };
+        }
+    }
+
     getMethods(callback) {
         this.request({
             method:'methods',
@@ -56,39 +103,7 @@ class BaseClient extends EventEmitter {
                     return callback(err);
                 }
 
-                this._methods = methods;
-
-                for (const methodTitle in methods) {
-
-                    debug(`register method ${methodTitle}`);
-
-                    this[methodTitle] = (...args) => {
-
-                        const lastArg = args[args.length-1];
-
-                        if (typeof lastArg === 'function') {
-                            this.request({
-                                method:methodTitle,
-                                params:args[0]||undefined,
-                                callback:lastArg
-                            });
-                        } else if (lastArg != null && typeof lastArg === 'object' && lastArg.lazy) {
-                            this.request({
-                                method:methodTitle,
-                                params:args[0]||undefined
-                            });
-                        } else {
-                            return new Promise((resolve, reject) => {
-                                this.request({
-                                    method:methodTitle,
-                                    params:args[0]||undefined,
-                                    resolve,
-                                    reject
-                                });
-                            });
-                        }
-                    };
-                }
+                this.registerMethods(this, methods);
                 callback();
             }
         });
@@ -266,10 +281,8 @@ class BaseClient extends EventEmitter {
             if (pendingRequests>0) {
                 debug(`closing client, but missed ${pendingRequests} pending requests`);
             }
-            this._socket.end();
-            if (callback) {
-                callback();
-            }
+            this._socket && this._socket.end();
+            callback && callback();
         });
     }
 

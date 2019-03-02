@@ -1,7 +1,7 @@
 const Client = require('../');
 const async = require('async');
 
-const client = new Client('tcp://127.0.0.1:6370');
+const client = new Client('dinarys://127.0.0.1');
 
 async.waterfall([
     (next) => {

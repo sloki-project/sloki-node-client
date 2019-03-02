@@ -1,11 +1,16 @@
 # Changelog
 
-## [0.0.7] - UNRELEASED
+## [0.0.9] - UNRELEASED
+
+### Added
+* add dinary(s) protocol support [#8](https://github.com/sloki-project/sloki-node-client/issues/8)
+
+## [0.0.8] - 2019-02-23
 
 ### Added
 * add getMethodsName() [#3](https://github.com/sloki-project/sloki-node-client/issues/3)
 * add getMethodDescription() [#4](https://github.com/sloki-project/sloki-node-client/issues/4)
-* TLS clients [#7](https://github.com/sloki-project/sloki-node-client/issues/7)
+* add TLS protocol support [#7](https://github.com/sloki-project/sloki-node-client/issues/7)
 
 ### Changed
 * use named parameters in jsonrpc layer [#6](https://github.com/sloki-project/sloki-node-client/issues/6)

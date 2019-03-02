@@ -4,7 +4,9 @@ const implementedTransports = [
     'binary',
     'binarys',
     'jsonrpc',
-    'jsonrpcs'
+    'jsonrpcs',
+    'dinary',
+    'dinarys'
 ];
 
 function Client(url, options) {
@@ -26,11 +28,11 @@ function Client(url, options) {
     }
 
     if (options.protocol === 'tcp') {
-        options.protocol = 'binary';
+        options.protocol = 'dinary';
     }
 
     if (options.protocol === 'tls') {
-        options.protocol = 'binarys';
+        options.protocol = 'dinarys';
     }
 
     url = url.replace(/^[^:]+:\/\//, '').split(':');
@@ -43,6 +45,8 @@ function Client(url, options) {
         MyClient = require('./src/jsonrpc');
     } else if (options.protocol.match(/binary/)) {
         MyClient = require('./src/binary');
+    } else if (options.protocol.match(/dinary/)) {
+        MyClient = require('./src/dinary');
     } else {
         throw new Error(`Unknow protocol ${options.protocol}`);
     }
