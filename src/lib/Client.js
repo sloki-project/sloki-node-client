@@ -140,39 +140,6 @@ class BaseClient extends EventEmitter {
         this.getMethods(callback);
     }
 
-    onSocketTimeout() {
-        debug('timeout');
-        this.emitEvent('timeout');
-        this.close();
-    }
-
-    onSocketClose() {
-        debug('close');
-        this.emitEvent('close');
-        this.unpipeSocket(this._socket);
-        this._isConnected = false;
-    }
-
-    onSocketEnd() {
-        debug('end');
-        this.emitEvent('end');
-        this.unpipeSocket(this._socket);
-        this._isConnected = false;
-        this._socket.destroy();
-    }
-
-    onSocketDestroy() {
-        debug('destroy');
-        this.emitEvent('destroy');
-        this.unpipeSocket(this._socket);
-        this._isConnected = false;
-    }
-
-    onSocketclose() {
-        this._isConnected = false;
-        this._socket.destroy();
-    }
-
     initializeSocket(callback) {
 
         let s;
@@ -183,16 +150,39 @@ class BaseClient extends EventEmitter {
             s = this.tcpConnect(callback);
         }
 
-        s.on('timeout', this.onSocketTimeout.bind(this));
-        s.on('close', this.onSocketClose.bind(this));
-        s.on('end', this.onSocketEnd.bind(this));
-        s.on('destroy', this.onSocketDestroy.bind(this));
+        s.on('timeout', () => {
+            debug('timeout');
+            this.emitEvent('timeout');
+            this.close();
+        });
+
+        s.on('close', () => {
+            debug('close');
+            this.emitEvent('close');
+            this.unpipeSocket(s);
+            this._isConnected = false;
+        });
+
+        s.on('end', () => {
+            debug('end');
+            this.emitEvent('end');
+            this.unpipeSocket(s);
+            this._isConnected = false;
+            s.destroy();
+        });
+
+        s.on('destroy', () => {
+            debug('destroy');
+            this.emitEvent('destroy');
+            this.unpipeSocket(s);
+            this._isConnected = false;
+        });
 
         s.on('error', (err) => {
             debug('error', err.message);
             callback(err);
             this.emitEvent('error', err);
-            this.unpipeSocket(this._socket);
+            this.unpipeSocket(s);
             s.destroy();
         });
 
