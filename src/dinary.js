@@ -9,13 +9,10 @@ function DinaryClient(port, host, options) {
     const clientWriter = new BinaryClient(port, host, options);
     const self = this;
 
-    clientReader.on('error', err => {
-        this.emit('error', err);
-    });
+    clientReader.on('error', err => { this.emit('error', err); });
+    clientWriter.on('error', err => { this.emit('error', err); });
 
-    clientWriter.on('error', err => {
-        this.emit('error', err);
-    });
+    clientWriter.on('close', err => { this.emit('close', err); });
 
     async function connect(callback) {
         let readerId;
@@ -56,9 +53,19 @@ function DinaryClient(port, host, options) {
         }
     }
 
+    function getMethodsName() {
+        return clientWriter.getMethodsName();
+    }
+
+    function getMethodDescription(method) {
+        return clientWriter.getMethodDescription(method);
+    }
+
     self.connect = promisify(connect);
     self.close = promisify(close);
     self.protocol = options.protocol;
+    self.getMethodsName = getMethodsName;
+    self.getMethodDescription = getMethodDescription;
 
     return self;
 
