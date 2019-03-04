@@ -27,6 +27,7 @@ const clientTls = new Client('tls://127.0.0.1:6371');
         await clientTls.loadDatabase({ db:'myTestDatabase' });
         await clientTls.insert({ col:'devices', doc:{ 'foo':'bar' } });
         const devices = await clientTls.find({ col:'devices' });
+        await clientTls.removeCollection({ c:'devices' });
         await clientTls.saveDatabase();
         await clientTls.close();
 
